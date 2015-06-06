@@ -1,0 +1,2 @@
+# Do not uploiad public keys to git
+*.pub

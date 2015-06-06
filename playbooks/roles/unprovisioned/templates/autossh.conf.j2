@@ -1,0 +1,36 @@
+# AutoSSH - persistent ssh connection
+#
+# Maintains a persistent SSH reverse tunnel to a given control server
+
+description "AutoSSH-based reverse SSH tunnel to control server"
+
+start on (started networking)
+stop  on (stopped networking)
+
+respawn
+
+setuid {{ ansible_user_id }}
+
+env AUTOSSH_GATETIME=0
+export AUTOSSH_GATETIME
+
+pre-start script
+    test -f /etc/default/autossh || { stop; exit 0; }
+    test -x /usr/bin/autossh || { stop; exit 0; }
+end script
+
+script 
+    . /etc/default/autossh
+    exec /usr/bin/autossh -v -N -T -x \
+        -o ControlMaster=yes \
+        -o Compression=yes \
+        -o TCPKeepAlive=yes \
+        -o ServerAliveCountMax=3 \
+        -o ServerAliveInterval=10 \
+        -o StrictHostKeyChecking=no \
+        -o UserKnownHostsFile=/dev/null \
+        -p $REMOTE_PORT \
+        -R :$REMOTE_SOCKET:localhost:$LOCAL_SSH_PORT \
+           "${REMOTE_USER}@${REMOTE_HOST}"
+end script
+

@@ -1,0 +1,49 @@
+---
+# --------------------------------------------------------
+# Tareas para un host que se va a desplegar detras de NAT.
+# --------------------------------------------------------
+
+- name: Update hostname according to serial number
+  sudo: yes
+  hostname: name=gateway-{{ serial }}
+
+- name: Create user's rsa key
+  shell: ssh-keygen -t rsa -N "" \
+         -f {{ ansible_user_dir }}/.ssh/id_rsa \
+         -b 4096 -C "serial-{{ serial }}@{{ domain }}"
+  args:
+    chdir:   "{{ ansible_user_dir }}"
+    creates: "{{ ansible_user_dir }}/.ssh/id_rsa.pub"
+
+- name: Fetch remote public key
+  fetch:
+    fail_on_missing: yes
+    flat: yes
+    src: "{{ ansible_user_dir }}/.ssh/id_rsa.pub"
+    dest: pub_keys/gateway-{{ serial }}.pub
+
+- name: Make sure autossh is installed
+  sudo: yes
+  apt: pkg=autossh state=installed
+
+- name: Copy autossh configuration file to default folder
+  sudo: yes
+  template:
+    src: autossh.default.j2
+    dest: /etc/default/autossh
+    owner: root
+    group: root
+    mode: 0644
+
+- name: Create upstart service for autossh
+  sudo: yes
+  template:
+    src: autossh.conf.j2
+    dest: /etc/init/autossh.conf
+    owner: root
+    group: root
+    mode: 0644
+
+- name: Start autossh service
+  sudo: yes
+  service: name=autossh state=started enabled=yes sleep=10

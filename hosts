@@ -1,0 +1,10 @@
+[ccserver]
+192.168.1.200	ansible_connection=ssh	ansible_ssh_user=rssh
+
+[unprovisioned]
+192.168.1.133	serial=0001 rssh_port=20001
+
+[unprovisioned:vars]
+ansible_connection=ssh
+ansible_ssh_user=gateway
+domain=gateway.es

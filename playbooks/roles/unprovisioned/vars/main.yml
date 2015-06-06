@@ -1,0 +1,20 @@
+# --------------------------------------------
+# La variable rssh_port procede del inventario.
+# Es el puerto inverso que debe abrir el equipo
+# en el servidor rssh.
+#
+# rssh_port: 20001
+# ---------------------------------------------
+
+# ---------------------------------------------
+# La variable suscriptor identifica el cliente
+# al que corresponde el gateway que se está
+# provisionando.
+#
+# suscriptor: cliente@disitel.es
+# ---------------------------------------------
+
+# Datos del servidor contra el que se crea el Reverse SSH Tunnel
+ccserver_user: rssh
+ccserver_host: 192.168.1.200
+ccserver_port: 22222
