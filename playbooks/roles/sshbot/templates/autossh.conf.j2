@@ -9,7 +9,7 @@ stop  on (stopped networking)
 
 respawn
 
-setuid {{ ansible_user_id }}
+setuid {{ sshbot_user }}
 
 env AUTOSSH_GATETIME=0
 export AUTOSSH_GATETIME

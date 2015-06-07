@@ -30,11 +30,13 @@ source bin/activate
 # Activar el entorno de ansible
 source ansible/hacking/env-setup
 
-# Cambiar la ruta al inventario
+# Variables de entorno que necesito
+export PUB_KEYS_DIR="$VIRTUALENV_PATH/inventory/pub_keys"
 export ANSIBLE_INVENTORY="$VIRTUALENV_PATH/inventory/hosts"
 export ANSIBLE_CONFIG="$VIRTUALENV_PATH/inventory/ansible.cfg"
+export ANSIBLE_LIBRARY="$VIRTUALENV_PATH/inventory/library"
 
 # Si se nos pasa "-U" en la linea de comandos, actualizar
-if [ "x$1" -eq "x-U" ]; then
+if [ "x$1" == "x-U" ]; then
     update
 fi

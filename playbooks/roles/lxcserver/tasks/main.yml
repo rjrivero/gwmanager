@@ -1,0 +1,166 @@
+---
+# No boy a usar lxd, esta muy poco documentado y no tengo ni idea
+# de como se usa. ME quedo con lxc tradicional.
+#- name: Add LXD repository
+#  sudo: yes
+#  apt_repository:
+#    repo: 'ppa:ubuntu-lxc/lxd-git-master'
+#    state: present
+#    update_cache: yes
+
+- name: Install LXC required packages
+  sudo: yes
+  apt: name={{ item }} state=latest
+  with_items:
+    #- lxd
+    - lxc
+    - uml-utilities
+    - ifenslave
+    # Esto es para el modulo python2-lxc
+    - lxc-dev
+    - python-dev
+    - build-essential
+    - git
+
+- name: Create LXC unprivileged container group
+  sudo: yes
+  group: name={{ lxc_user }} state=present
+
+- name: Create LXC unprivileged container user
+  sudo: yes
+  user:
+    name: "{{ lxc_user }}"
+    state: present
+    createhome: yes
+    home: "/home/{{ lxc_user }}"
+    group: "{{ lxc_user }}"
+
+# -----------------------------------------------------
+# Preparacion para ejecutar containers no privilegiados
+# Vease "https://linuxcontainers.org/lxc/getting-started/"
+# -----------------------------------------------------
+
+- name: Create LXC configuration directories
+  become: yes
+  become_user: "{{ lxc_user }}"
+  file:
+    path: "/home/{{ lxc_user }}/{{ item }}"
+    owner: "{{ lxc_user }}"
+    group: "{{ lxc_user }}"
+    mode: 0755
+    state: directory
+  with_items:
+    - .
+    - .local
+    - .local/share
+    - .local/share/lxc
+    - .config
+    - .config/lxc
+    - .ssh
+
+- name: Get subuids for LXC user
+  sudo: yes
+  subuid: name={{ lxc_user }}
+
+- name: Add LXC default.conf config
+  sudo: yes
+  template:
+    src: default.conf.j2
+    dest: "/home/{{ lxc_user }}/.config/lxc/default.conf"
+    owner: "{{ lxc_user }}"
+    group: "{{ lxc_user }}"
+    mode: 0644
+
+- name: Add network mapping privileges
+  sudo: yes
+  template:
+    src: lxc-usernet.j2
+    dest: /etc/lxc/lxc-usernet
+
+- name: Copy bridging config file (networking.sh) to /root
+  sudo: yes
+  copy:
+    src: networking.sh
+    dest: /root/networking.sh
+    mode: 0755
+
+# Despues de esto, se puede cambiar la config de red con:
+# ansible [host] -a "/root/networking.sh <IP> <MASK> <GW> <DNS1> <DNS2>" --sudo
+
+- name: Make lxc_user accesible to Ansible
+  sudo: yes
+  copy:
+    src:  "{{ pub_keys_dir }}/{{ ccserver_pkey }}"
+    dest: "/home/{{ lxc_user }}/.ssh/authorized_keys"
+    owner: "{{ lxc_user }}"
+    group: "{{ lxc_user }}"
+    mode: 0644
+
+- name: Create blade directory
+  sudo: yes
+  file:
+    path:  "{{ item }}"
+    owner: "{{ lxc_user }}"
+    group: "{{ lxc_user }}"
+    mode:  0755
+    state: directory
+  with_items:
+    - "{{ lxc_path }}"
+    - "{{ lxc_path }}/root"
+    - "{{ lxc_path }}/lxc"
+    - "{{ lxc_path }}/images"
+
+- name: Clone python2-lxc library
+  become: yes
+  become_user: "{{ lxc_user }}"
+  git:
+    accept_hostkey: yes
+    clone: yes
+    dest: "{{ lxc_path }}/git/python2-lxc"
+    repo: "https://github.com/lxc/python2-lxc.git"
+    update: yes
+
+- name: build python2-lxc library
+  become: yes
+  become_user: "{{ lxc_user }}"
+  shell: python setup.py build 
+  args:
+    chdir: "{{ lxc_path }}/git/python2-lxc"
+
+- name: Install python2-lxc library
+  sudo: yes
+  shell: python setup.py install 
+  args:
+    chdir: "{{ lxc_path }}/git/python2-lxc"
+
+# Creacion de blades
+
+# Es J*DIDAMENTE COMPLICADO ejecutar LXCs con un usuario que no sea el
+# de inicio de sesion ( ver:
+# - https://gist.github.com/julianlam/4e2bd91d8dedee21ca6f
+# - Los comentarios con WARN en https://www.stgraber.org/2014/01/17/lxc-1-0-unprivileged-containers/ )
+#
+# Para evitar estos problemas, tengo que hacver que el usuario que inicia
+# la conexion en ansible sea directamente el usuario destinado a ejecutar
+# los contenedores.
+
+#- name: Remove LXC blades
+#  tags: remove_blades
+#  remote_user: "{{ lxc_user }}"
+#  lxc_container:
+#    name: "{{ item.name }}"
+#    state: absent
+#  with_items: "{{ blades }}"
+
+- name: Create LXC blades
+  remote_user: "{{ lxc_user }}"
+  tags: blades
+  lxc_container:
+    name: "{{ item.name }}"
+    template: download
+    template_options: "{{ lxc_template }}"
+    config: "/home/{{ lxc_user }}/.config/lxc/default.conf"
+    lxc_path:  "{{ lxc_path }}/lxc"
+    state: started
+  with_items: "{{ blades }}"
+

@@ -1,4 +1,5 @@
 ---
-- hosts: unprovisioned
+- hosts: gateways
+  remote_user: "{{ management_user }}"
   roles:
-    - unprovisioned
+    - lxcserver

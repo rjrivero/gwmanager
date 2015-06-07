@@ -1,0 +1,3 @@
+---
+blades:
+  - { slot: 1, name: pbx }

@@ -1,0 +1,17 @@
+# Directorio donde se almacenan los blades
+lxc_path: /opt/blades
+
+# Parametros de template para mis containers
+# (Usando el modulo LXC)
+lxc_template: -d ubuntu -r trusty -a amd64
+
+# Parametros de imagen para acceso mediante LXD directo
+lxc_image: ubuntu trusty amd64
+lxc_alias: ubuntu
+
+# Id de usuario que ejecutara los containers no privilegiados
+lxc_user: lxcuser
+
+# Directorio donde se almacenan las claves publicas
+pub_keys_dir: "{{ lookup('env', 'PUB_KEYS_DIR') }}"
+ccserver_pkey: authorized_keys

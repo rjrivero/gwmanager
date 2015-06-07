@@ -1,0 +1,120 @@
+---
+# --------------------------------------------------------
+# Tareas para un host que se va a desplegar detras de NAT.
+# --------------------------------------------------------
+
+# Provision inicial: a partir de aqui, ansible se ejecuta
+# sin necesidad de introducir passwords de login ni sudo.
+
+- name: Create sshbot group
+  sudo: yes
+  group: name={{ sshbot_user }} state=present
+
+- name: Create sshbot user
+  sudo: yes
+  user:
+    name:  "{{ sshbot_user }}"
+    group: "{{ sshbot_user }}"
+    createhome: yes
+    home:  "/home/{{ sshbot_user }}"
+    generate_ssh_key: yes
+    ssh_key_bits: 4096
+    state: present
+   
+- name: Modify sudoers so that we do not require passwords
+  sudo: yes
+  lineinfile:
+    dest: /etc/sudoers
+    line: '%{{ sshbot_user }} ALL=(ALL) NOPASSWD:ALL'
+    state: present
+
+- name: Store RSSH server's authorized keys
+  sudo: yes
+  copy:
+    src:  "{{ pub_keys_dir }}/{{ ccserver_pkey }}"
+    dest: "/home/{{ sshbot_user }}/.ssh/authorized_keys"
+    mode: "0644"
+    owner: "{{ sshbot_user }}"
+    group: "{{ sshbot_user }}"
+
+#- name: Create user's rsa key
+#  shell: ssh-keygen -t rsa -N "" \
+#         -f "{{ ansible_user_dir }}/.ssh/id_rsa" \
+#         -b 4096 -C "serial-{{ serial }}@{{ domain }}"
+#  args:
+#    chdir:   "{{ ansible_user_dir }}"
+#    creates: "{{ ansible_user_dir }}/.ssh/id_rsa.pub"
+
+- name: Make public key readable for provisioning user
+  # Si no hago esto, el fetch falla
+  sudo: yes
+  tags: fetch
+  file:
+    path:  "/home/{{ sshbot_user }}/{{ item.path }}"
+    group: "{{ item.group }}"
+    mode:  "{{ item.mode }}"
+    owner: "{{ sshbot_user }}"
+  with_items:
+    - { path: '.',    group: "{{ sshbot_user }}",     mode: "0755" }
+    - { path: '.ssh', group: "{{ ansible_user_id }}", mode: "0750" }
+
+- name: Fetch remote public key
+  tags: fetch
+  # Ya no es necesario sudo, a raiz del cambio hecho arriba.
+  # Si no hago ese cambio, no funciona ni con sudo.
+  #sudo: yes
+  fetch:
+    fail_on_missing: yes
+    flat: yes
+    src: "/home/{{ sshbot_user }}/.ssh/id_rsa.pub"
+    dest: "{{ pub_keys_dir }}/gateway-{{ serial }}.pub"
+
+- name: Disallow login with password, only allow certificates
+  sudo: yes
+  lineinfile:
+    dest: /etc/ssh/sshd_config
+    regexp: '^#?PasswordAuthentication\s+'
+    line: 'PasswordAuthentication no'
+    state: present
+# UNA MIERDA COMO EL SOMBRERO DE UN PICADOR. No me notifica al
+# servicio ssh despues de cambiar la linea. Asi que lo reinicio a mano. 
+#  notify:
+#    - Reload ssh service
+
+- name: Reload ssh service
+  sudo: yes
+  service: name=ssh state=reloaded
+
+# Esta es la configuracion de autossh, solo si el equipo va a
+# estar detras de NAT y necesita un proxy ssh.
+
+- name: Make sure autossh is installed
+  sudo: yes
+  when: rssh_port is defined
+  apt: pkg=autossh state=installed
+
+- name: Copy autossh configuration file to default folder
+  sudo: yes
+  when: rssh_port is defined
+  template:
+    src: autossh.default.j2
+    dest: /etc/default/autossh
+    owner: root
+    group: root
+    mode: 0644
+
+- name: Create upstart service for autossh
+  sudo: yes
+  when: rssh_port is defined
+  template:
+    src: autossh.conf.j2
+    dest: /etc/init/autossh.conf
+    owner: root
+    group: root
+    mode: 0644
+
+- name: Start autossh service
+  sudo: yes
+  tags: autossh
+  when: rssh_port is defined
+  service: name=autossh state=restarted enabled=yes sleep=10

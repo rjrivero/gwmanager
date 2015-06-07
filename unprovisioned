@@ -1,0 +1,5 @@
+[unprovisioned]
+192.168.1.210	serial=0000 rssh_port=20000
+
+[unprovisioned:vars]
+ansible_ssh_user=admin

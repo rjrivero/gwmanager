@@ -14,7 +14,17 @@
 # suscriptor: cliente@disitel.es
 # ---------------------------------------------
 
+# Usuario de gestion una vez que la cuenta esta inicializada
+sshbot_user: ansible
+
+# Directorio donde se almacenan las claves publicas
+pub_keys_dir: "{{ lookup('env', 'PUB_KEYS_DIR') }}"
+
 # Datos del servidor contra el que se crea el Reverse SSH Tunnel
 ccserver_user: rssh
 ccserver_host: 192.168.1.200
-ccserver_port: 22222
+ccserver_port: 15000
+
+# Nombre del fichero en pub_keys_dir donde esta la clave publica del
+# servidor de rssh
+ccserver_pkey: authorized_keys
