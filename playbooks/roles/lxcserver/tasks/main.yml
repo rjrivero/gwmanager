@@ -1,6 +1,6 @@
 ---
-# No boy a usar lxd, esta muy poco documentado y no tengo ni idea
-# de como se usa. ME quedo con lxc tradicional.
+# No voy a usar lxd, esta muy poco documentado y no tengo ni idea
+# de como se usa. Me quedo con lxc tradicional.
 #- name: Add LXD repository
 #  sudo: yes
 #  apt_repository:
@@ -151,6 +151,15 @@
 #    name: "{{ item.name }}"
 #    state: absent
 #  with_items: "{{ blades }}"
+
+# La lista de blades es el parametro "blades" del host,
+# por cada item de esa lista se crea un contenedor.
+#
+# Por ejemplo, en host-vars/lxc-server-01:
+# ---
+# blades:
+#   - { slot: 1, name: pbx }
+#
 
 - name: Create LXC blades
   remote_user: "{{ lxc_user }}"

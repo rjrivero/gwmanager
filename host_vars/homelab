@@ -1,0 +1,59 @@
+---
+
+# Obtener una URL de discovery:
+# curl -w "\n" 'https://discovery.etcd.io/new?size=3'
+discovery_url: "https://discovery.etcd.io/c8def9d3d4a8cdb889267b3ab8f3d71b"
+
+# Ruta al directorio donde almaceno las maquinas virtuales
+vm_path: "/vbox/kvm"
+
+# Nodo ZFS donde tenemos los volumenes
+zfs_path: "tank/vbox/kvm"
+
+# Tamaño de volumen ZFS
+zfs_volsize: "64G"
+
+# Dirección IP del bridge en el anfitrion
+bridge_addr: 192.168.200.1
+
+# Longitud en bits de la mascara de la red
+bridge_mask: 24
+
+# Direccion de la red del bridge
+bridge_net: 192.168.200.0
+
+# Direccion IP del DNS
+dns_addr: 192.168.1.200
+
+# Red de flannel, con mascara
+flannel_net: 10.2.0.0/16
+
+# Tamaño de la subred flannel de cada host
+flannel_subnet_len: 24
+
+# Indice de la VXLAN
+flannel_vni: 1
+
+# Hosts del cluster
+hosts:
+  - {
+      hostname: "cluster1",
+      mac: "00:50:52:11:22:01",
+      address: 192.168.200.11,
+      ncpus: 2,
+      memory: 2048,
+    }  
+  - {
+      hostname: "cluster2",
+      mac: "00:50:52:11:22:02",
+      address: 192.168.200.12,
+      ncpus: 2,
+      memory: 2048,
+    }  
+  - {
+      hostname: "cluster3",
+      mac: "00:50:52:11:22:03",
+      address: 192.168.200.13,
+      ncpus: 2,
+      memory: 2048,
+    }  

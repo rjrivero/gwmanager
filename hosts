@@ -1,10 +1,15 @@
+[labhosts]
+homelab		ansible_ssh_host=192.168.1.151
+
 [ccserver]
 192.168.1.200	ansible_ssh_user=rssh
 
 [gateways]
 gateway-0000	ansible_ssh_port=20000
 
-
 [gateways:vars]
 ansible_ssh_host=192.168.1.200
 management_user=ansible
+
+[labhosts:vars]
+ansible_ssh_user=ansible

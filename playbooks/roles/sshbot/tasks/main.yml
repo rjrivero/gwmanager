@@ -6,6 +6,18 @@
 # Provision inicial: a partir de aqui, ansible se ejecuta
 # sin necesidad de introducir passwords de login ni sudo.
 
+# sshbot_user:
+#     variable definida en vars/main.yml. Nombre de usuario
+#     con el que se ejecuta el servicio autossh.
+#
+# pub_keys_dir:
+#     directorio donde se almacena
+#     - la clave publica del servidor de RSSH (fichero "authorized_keys")
+#     - las claves publicas recuperadas de los clientes de RSSH
+#     las claves publicas de los clientes RSSH hay que subirlas al
+#     authorized_keys del servidor, para que el cliente de autossh
+#     pueda conectarse.
+
 - name: Create sshbot group
   sudo: yes
   group: name={{ sshbot_user }} state=present

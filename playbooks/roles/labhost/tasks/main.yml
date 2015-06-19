@@ -1,0 +1,186 @@
+---
+
+- name: Install software required
+  sudo: yes
+  apt:
+    update_cache: yes
+    install_recommends: no
+    pkg: "{{ item }}"
+    state: installed
+  with_items:
+    - bridge-utils
+    - qemu-system-x86
+    - qemu-utils
+    - bzip2
+    - btrfs-tools
+    - iproute2
+  tags: install
+
+# Cuidado! si creo el bridge con "brctl add" pero sin ninguna
+# interfaz, luego no soy capaz de llegar a las maquinas virtuales.
+# Por eso, utilizo iproute2
+
+- name: Check if bridge is running
+  shell: ip link list "{{ bridge_name }}"
+  register: bridge_up
+  ignore_errors: yes
+  tags: network
+
+- name: Create bridge
+  sudo: yes
+  shell: ip link add "{{ bridge_name }}" type bridge
+  when: bridge_up.rc != 0
+  tags: network
+
+- name: Enable bridge
+  sudo: yes
+  shell: ip link set dev "{{ bridge_name }}" up
+  when: bridge_up.rc != 0
+  tags: network
+
+- name: Set bridge ip address
+  sudo: yes
+  shell: ip address add "{{ bridge_addr }}/{{ bridge_mask }}" \
+         dev "{{ bridge_name }}"
+  when: bridge_up.rc != 0
+  tags: network
+
+- name: Enable IPv4 routing
+  sudo: yes
+  sysctl: name="net.ipv4.ip_forward" value=1 state=present sysctl_set=yes
+  tags: network
+
+- name: Check if masquerading is configured
+  sudo: yes
+  shell: iptables -t nat -L POSTROUTING | \
+         grep -q "MASQUERADE.*{{ bridge_net }}/{{ bridge_mask }}"
+  register: nat_enabled
+  ignore_errors: yes
+  tags: network
+
+- name: Add masquerading rule
+  sudo: yes
+  shell: iptables -t nat -A POSTROUTING \
+         --src "{{ bridge_net }}/{{ bridge_mask }}" \
+         "!" --dst "{{ bridge_net }}/{{ bridge_mask }}" \
+         -j MASQUERADE
+  when: nat_enabled.rc != 0
+  tags: network
+
+- name: Download coreos image
+  sudo: yes
+  get_url:
+    url:  "{{ coreos_url_bz2 }}"
+    dest: "{{ vm_path }}/{{ coreos_image }}.bz2"
+    force: no
+  tags: download
+
+- name: Unpack coreos image
+  sudo: yes
+  shell: bzcat "{{ coreos_image }}.bz2" > "{{ coreos_image }}"
+  args:
+    chdir: "{{ vm_path }}"
+    creates: "{{ coreos_image }}"
+  tags: download
+
+- name: Change ownership of template file
+  sudo: yes
+  file:
+    dest: "{{ vm_path }}/{{ item }}"
+    mode: 0644
+    owner: "{{ ansible_user_id }}"
+    group: "{{ ansible_user_id }}"
+  with_items:
+    - "{{ coreos_image }}.bz2"
+    - "{{ coreos_image }}"
+  tags: download
+
+- name: Create VM directories
+  sudo: yes
+  file:
+    dest: "{{ vm_path }}/{{ item.hostname }}"
+    state: directory
+    mode: 0755
+    owner: "{{ ansible_user_id }}"
+    group: "{{ ansible_user_id }}"
+  with_items: "{{ hosts }}"
+  tags: deploy
+
+- name: Deploy VM scripts
+  template: 
+    src: coreos_qemu.sh.j2
+    dest: "{{ vm_path }}/{{ item.hostname }}/coreos_qemu.sh"
+    mode: 0755
+  with_items: "{{ hosts }}"
+  tags: deploy
+
+- name: Deploy cloud config files
+  template: 
+    src: cloud-config.yml.j2
+    dest: "{{ vm_path }}/{{ item.hostname }}/cloud-config.yml"
+    mode: 0644
+  with_items: "{{ hosts }}"
+  tags: deploy
+
+- name: Copy image file to VM folder
+  shell: cp "../{{ coreos_image }}" .
+  args:
+    chdir: "{{ vm_path }}/{{ item.hostname }}"
+    creates: "{{ coreos_image }}"
+  with_items: "{{ hosts }}"
+  tags: deploy
+
+- name: Set proper owner for image file
+  sudo: yes
+  file:
+    path: "{{ vm_path }}/{{ item.hostname }}/{{ coreos_image }}"
+    mode: 0644
+    owner: "{{ ansible_user_id }}"
+    group: "{{ ansible_user_id }}"
+  with_items: "{{ hosts }}"
+  tags: storage
+
+- name: Copy authorized keys
+  sudo: yes
+  copy:
+    src:  "{{ pub_keys_dir }}/{{ ccserver_pkey }}"
+    dest: "{{ vm_path }}/{{ item.hostname }}/authorized_keys"
+    mode: 0640
+    owner: "{{ ansible_user_id }}"
+    group: "{{ ansible_user_id }}"
+  with_items: "{{ hosts }}"
+  tags: deploy
+
+- name: Get volumes present
+  sudo: yes
+  shell: zfs list -t volume -H -o name
+  register: volumes
+  ignore_errors: yes
+  tags: storage
+
+- name: If volume is not present, create it
+  sudo: yes
+  shell: zfs create -V "{{ zfs_volsize }}" "{{ zfs_path }}/{{ item.hostname }}"
+  when: volumes.stdout.find("{{ zfs_path }}/{{ item.hostname }}") == -1
+  with_items: "{{ hosts }}"
+  tags: storage
+
+- name: If volume was not present, format it
+  sudo: yes
+  filesystem:
+    fstype: btrfs
+    dev: "/dev/zvol/{{ zfs_path }}/{{ item.hostname }}"
+  when: volumes.stdout.find("{{ zfs_path }}/{{ item.hostname }}") == -1
+  with_items: "{{ hosts }}"
+  tags: storage
+
+- name: Change ownership of volume
+  sudo: yes
+  file:
+    dest: "/dev/zvol/{{ zfs_path }}/{{ item.hostname }}"
+    owner: "{{ ansible_user_id }}"
+    group: "{{ ansible_user_id }}"
+    follow: yes
+    state: file
+  with_items: "{{ hosts }}"
+  tags: storage

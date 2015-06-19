@@ -1,0 +1,31 @@
+---
+
+# URL de la que descargar la imagen de CoreOS
+coreos_url_bz2: "http://stable.release.core-os.net/amd64-usr/current/coreos_production_qemu_image.img.bz2"
+coreos_image: "coreos_qemu_image.img"
+
+# Nombre del dispositivo bridge al que conectaremos las instancias
+bridge_name: br0
+
+# Dirección IP del bridge en el anfitrion
+bridge_addr: 192.168.200.1
+
+# Longitud en bits de la mascara de la red
+bridge_mask: 24
+
+# Direccion de la red del bridge
+bridge_net: 192.168.200.0
+
+# Red de flannel, con mascara
+flannel_net: 10.2.0.0/16
+
+# Tamaño de la subred flannel de cada host
+flannel_subnet_len: 24
+
+# Indice de la VXLAN
+flannel_vni: 1
+
+# Directorio donde se almacenan las claves publicas
+pub_keys_dir: "{{ lookup('env', 'PUB_KEYS_DIR') }}"
+ccserver_pkey: authorized_keys
+

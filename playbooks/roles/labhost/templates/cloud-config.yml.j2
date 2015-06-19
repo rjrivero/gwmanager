@@ -1,0 +1,99 @@
+#cloud-config
+---
+
+# Hostname y /etc/hosts
+hostname: {{ item.hostname }}
+manage_etc_hosts: localhost
+
+coreos:
+
+  # bootstrap del cluster
+  etcd2:
+    discovery: {{ discovery_url }}
+    initial-advertise-peer-urls: http://{{ item.address }}:2380
+    advertise-client-urls: http://{{ item.address }}:2379
+    listen-client-urls: http://0.0.0.0:2379
+    listen-peer-urls: http://{{ item.address }}:2380
+
+  # entorno de pruebas
+  fleet:
+    metadata: env=testing
+
+  update:
+    reboot-strategy: best-effort
+    group: stable
+
+  units:
+
+    # Arranque de servicios de infraestructura
+    - name: etcd2.service
+      command: start
+    - name: fleet.service
+      command: start
+
+    # Configuracion estatica de red. Los parametros de
+    # direccion IP y puerto que pongo corresponden a la
+    # red host por defecto de Qemu-KVM.
+    - name: 00-eth0.network
+      runtime: true
+      content: |
+        [Match]
+        Name=eth0
+ 
+        [Network]
+        DNS={{ dns_addr }}
+        Address={{ item.address }}/{{ bridge_mask }}
+        Gateway={{ bridge_addr }}
+
+    # Arranco el servicio flannel con las redes indicadas
+    - name: flanneld.service
+      drop-ins:
+        - name: 50-network-config.conf
+          content: |
+            [Service]
+            ExecStartPre=/usr/bin/etcdctl set /coreos.com/network/config '{ \
+              "Network": "{{ flannel_net }}", \
+              "SubnetLen": {{ flannel_subnet_len }}, \
+              "Backend": { \
+                  "Type": "vxlan", \
+                  "VNI": {{ flannel_vni }} \
+              } \
+            }'
+      command: start
+
+    # Esto no me hace falta de momento porque utilizo
+    # Ansible para formatear el sistema de ficheros
+    #- name: format-ephemeral.service
+    #  command: start
+    #  content: |
+    #    [Unit]
+    #    Description=Formats the ephemeral drive
+    #    [Service]
+    #    Type=oneshot
+    #    RemainAfterExit=yes
+    #    ExecStart=/usr/sbin/wipefs -f /dev/xvdb
+    #    ExecStart=/usr/sbin/mkfs.btrfs -f /dev/xvdb
+
+    #- name: var-lib-docker.mount
+    #  command: start
+    #  content: |
+    #    [Unit]
+    #    Description=Mount ephemeral to /var/lib/docker
+    #    Requires=format-ephemeral.service
+    #    After=format-ephemeral.service
+    #    Before=docker.service
+    #    [Mount]
+    #    What=/dev/xvdb
+    #    Where=/var/lib/docker
+    #    Type=btrfs
+
+    - name: var-lib-docker.mount
+      command: start
+      content: |
+        [Unit]
+        Description=Mount drive to /var/lib/docker
+        Before=docker.service
+        [Mount]
+        What=/dev/vdb
+        Where=/var/lib/docker
+        Type=btrfs
