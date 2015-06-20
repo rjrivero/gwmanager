@@ -12,12 +12,12 @@ coreos:
     discovery: {{ discovery_url }}
     initial-advertise-peer-urls: http://{{ item.address }}:2380
     advertise-client-urls: http://{{ item.address }}:2379
-    listen-client-urls: http://0.0.0.0:2379
+    listen-client-urls: http://0.0.0.0:2379,http://0.0.0.0:4001
     listen-peer-urls: http://{{ item.address }}:2380
 
-  # entorno de pruebas
+  # metadatos de cada servidor
   fleet:
-    metadata: env=testing
+    metadata: "{{ item.metadata }}"
 
   update:
     reboot-strategy: best-effort
@@ -41,25 +41,28 @@ coreos:
         Name=eth0
  
         [Network]
-        DNS={{ dns_addr }}
+        DNS={{ bridge_addr }}
         Address={{ item.address }}/{{ bridge_mask }}
         Gateway={{ bridge_addr }}
 
+    # De momento no arranco flannel, dejo port binding. Flannel
+    # es una movida sobre todo para el discivery. deberia correr
+    # otro cluster etcd en la red interna de flannel.
     # Arranco el servicio flannel con las redes indicadas
-    - name: flanneld.service
-      drop-ins:
-        - name: 50-network-config.conf
-          content: |
-            [Service]
-            ExecStartPre=/usr/bin/etcdctl set /coreos.com/network/config '{ \
-              "Network": "{{ flannel_net }}", \
-              "SubnetLen": {{ flannel_subnet_len }}, \
-              "Backend": { \
-                  "Type": "vxlan", \
-                  "VNI": {{ flannel_vni }} \
-              } \
-            }'
-      command: start
+    #- name: flanneld.service
+    #  drop-ins:
+    #    - name: 50-network-config.conf
+    #      content: |
+    #        [Service]
+    #        ExecStartPre=/usr/bin/etcdctl set /coreos.com/network/config '{ \
+    #          "Network": "{{ flannel_net }}", \
+    #          "SubnetLen": {{ flannel_subnet_len }}, \
+    #          "Backend": { \
+    #              "Type": "vxlan", \
+    #              "VNI": {{ flannel_vni }} \
+    #          } \
+    #        }'
+    #  command: start
 
     # Esto no me hace falta de momento porque utilizo
     # Ansible para formatear el sistema de ficheros
@@ -87,13 +90,13 @@ coreos:
     #    Where=/var/lib/docker
     #    Type=btrfs
 
-    - name: var-lib-docker.mount
+    - name: opt.mount
       command: start
       content: |
         [Unit]
-        Description=Mount drive to /var/lib/docker
+        Description=Mount drive to /opt
         Before=docker.service
         [Mount]
         What=/dev/vdb
-        Where=/var/lib/docker
+        Where=/opt
         Type=btrfs

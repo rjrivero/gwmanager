@@ -14,6 +14,7 @@
     - bzip2
     - btrfs-tools
     - iproute2
+    - dnsmasq
   tags: install
 
 # Cuidado! si creo el bridge con "brctl add" pero sin ninguna
@@ -66,6 +67,48 @@
          -j MASQUERADE
   when: nat_enabled.rc != 0
   tags: network
+
+- name: Add static NAT to SSH ports
+  sudo: yes
+  shell: iptables -t nat -A PREROUTING \
+         -i "{{ public_interface }}" -p tcp \
+         --dport "{{ item.forward_ssh }}" \
+         -j DNAT --to-destination "{{ item.address }}:22"
+  when: nat_enabled.rc != 0
+  with_items: "{{ hosts }}"
+  tags: network
+
+- name: Set quemu-bridge-helper setuid
+  sudo: yes
+  file:
+    path: /usr/lib/qemu-bridge-helper
+    owner: root
+    group: "{{ ansible_user_id }}"
+    mode: 04750
+  tags: network
+
+- name: Set DNSmasq to listen only on bridge interface
+  sudo: yes
+  template:
+    src: dnsmasq-bridge.conf.j2
+    dest: /etc/dnsmasq.d/bridge.conf
+    owner: root
+    group: root
+  tags: network
+
+- name: Resolve DNS entries for hosts
+  sudo: yes
+  lineinfile:
+    dest: /etc/hosts
+    line: "{{ item.address }}   {{ item.hostname }}"
+  with_items: "{{ hosts }}"
+  tags: network
+
+- name: Reload dnsmasq
+  sudo: yes
+  service: name=dnsmasq state=restarted
+  tags: network
+
 
 - name: Download coreos image
   sudo: yes

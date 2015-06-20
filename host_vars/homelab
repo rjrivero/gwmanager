@@ -2,7 +2,7 @@
 
 # Obtener una URL de discovery:
 # curl -w "\n" 'https://discovery.etcd.io/new?size=3'
-discovery_url: "https://discovery.etcd.io/c8def9d3d4a8cdb889267b3ab8f3d71b"
+discovery_url: "https://discovery.etcd.io/deee5e2ae76465f7838249a82b32a926"
 
 # Ruta al directorio donde almaceno las maquinas virtuales
 vm_path: "/vbox/kvm"
@@ -13,6 +13,9 @@ zfs_path: "tank/vbox/kvm"
 # Tamaño de volumen ZFS
 zfs_volsize: "64G"
 
+# Interfaz publica del host, para publicar los puertos
+public_interface: "wlan0"
+
 # Dirección IP del bridge en el anfitrion
 bridge_addr: 192.168.200.1
 
@@ -21,9 +24,6 @@ bridge_mask: 24
 
 # Direccion de la red del bridge
 bridge_net: 192.168.200.0
-
-# Direccion IP del DNS
-dns_addr: 192.168.1.200
 
 # Red de flannel, con mascara
 flannel_net: 10.2.0.0/16
@@ -37,11 +37,20 @@ flannel_vni: 1
 # Hosts del cluster
 hosts:
   - {
+      # Nombre del host
       hostname: "cluster1",
+      # Direccion MAC de su tarjeta
       mac: "00:50:52:11:22:01",
+      # Direccion IP perteneciente al bridge
       address: 192.168.200.11,
+      # Numero de CPUs virtuales
       ncpus: 2,
+      # Tamaño de memoria virtual
       memory: 2048,
+      # puerto del host a redireccionar
+      forward_ssh: 60001,
+      # Metadatos a añadir al servidor
+      metadata: "env=homelab",
     }  
   - {
       hostname: "cluster2",
@@ -49,6 +58,8 @@ hosts:
       address: 192.168.200.12,
       ncpus: 2,
       memory: 2048,
+      forward_ssh: 60002,
+      metadata: "env=homelab",
     }  
   - {
       hostname: "cluster3",
@@ -56,4 +67,6 @@ hosts:
       address: 192.168.200.13,
       ncpus: 2,
       memory: 2048,
+      forward_ssh: 60003,
+      metadata: "env=homelab,role=dbserver"
     }  
