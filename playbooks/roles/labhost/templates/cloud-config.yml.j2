@@ -5,15 +5,55 @@
 hostname: {{ item.hostname }}
 manage_etc_hosts: localhost
 
+write_files:
+
+  # Uso como toolbox un ubuntu, me lo conozco mejor que el Fedora
+  - path: /home/core/.toolboxrc
+    owner: core
+    content: |
+      TOOLBOX_DOCKER_IMAGE=ubuntu-debootstrap
+      TOOLBOX_DOCKER_TAG=trusty
+      TOOLBOX_USER=root
+
+  # Permito el uso del repositorio inseguro
+  - path: /etc/default/docker
+    owner: root
+    content: |
+      DOCKER_OPTS="--insecure-registry http://{{ registry }}:5000"
+
+  # Publico la ruta del direcotrio inseguro, para que todos
+  # los servicios la puedan usar
+  - path: /etc/default/registry
+    owner: root
+    content: |
+      REGISTRY_URL="{{ registry }}:5000"
+
+  # Hago que docker cargue las variables de entorno del
+  # fichero /etc/default/docker, que por defecto systemd
+  # las ignora
+  # (ver https://github.com/docker/docker/issues/9889)
+  - path: /etc/systemd/system/docker.service.d/defaults.conf
+    owner: core:core
+    permissions: 0644
+    content: |
+      [Service]
+      EnvironmentFile=-/etc/default/docker
+
 coreos:
 
   # bootstrap del cluster
   etcd2:
-    discovery: {{ discovery_url }}
+    name: "{{ item.hostname }}"
     initial-advertise-peer-urls: http://{{ item.address }}:2380
     advertise-client-urls: http://{{ item.address }}:2379
     listen-client-urls: http://0.0.0.0:2379,http://0.0.0.0:4001
     listen-peer-urls: http://{{ item.address }}:2380
+{% if bootstrap %}
+    discovery: {{ discovery_url.stdout }}
+{% else %}
+    initial-cluster-state: existing
+    initial-cluster: "{% for host in hosts %}{{ host.hostname }}=http://{{ host.address }}:2380{% if not loop.last %},{% endif %}{% endfor %}"
+{% endif %}
 
   # metadatos de cada servidor
   fleet:
@@ -24,6 +64,11 @@ coreos:
     group: stable
 
   units:
+
+    # Reinicio docker para que coja los cambios en
+    # las variables de entorno
+    - name: docker.service
+      command: restart
 
     # Arranque de servicios de infraestructura
     - name: etcd2.service
@@ -95,8 +140,41 @@ coreos:
       content: |
         [Unit]
         Description=Mount drive to /opt
-        Before=docker.service
+        Before=docker.service create-repo.service
         [Mount]
         What=/dev/vdb
         Where=/opt
         Type=btrfs
+
+    # Me llevo docker a un subvolumen de btrfs
+    # en la ubicacion por defecto es desesperante lo que
+    # tarda en bajarse una imagen...
+    # Asi por lo menos, si me tengo que cargar el cluster,
+    # no necesito bajar todas las imagenes.
+    - name: create-repo.service
+      command: start
+      content: |
+        [Unit]
+        Description=Creates the docker repo
+        Requires=opt.mount
+        After=opt.mount
+        Before=docker.service
+        [Service]
+        Type=oneshot
+        RemainAfterExit=yes
+        ExecStart=-/usr/sbin/btrfs subvolume create /opt/docker
+
+    - name: var-lib-docker.mount
+      command: start
+      content: |
+        [Unit]
+        Description=Mount repository to /var/lib/docker
+        Requires=create-repo.service
+        After=create-repo.service
+        Before=docker.service
+        [Mount]
+        What=/opt/docker
+        Where=/var/lib/docker
+        Type=none
+        Options=bind
+

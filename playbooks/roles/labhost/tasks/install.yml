@@ -1,0 +1,18 @@
+---
+
+- name: Install software required
+  sudo: yes
+  apt:
+    update_cache: yes
+    install_recommends: no
+    pkg: "{{ item }}"
+    state: installed
+  with_items:
+    - curl
+    - bridge-utils
+    - qemu-system-x86
+    - qemu-utils
+    - bzip2
+    - btrfs-tools
+    - iproute2
+    - dnsmasq

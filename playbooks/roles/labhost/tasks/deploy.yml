@@ -1,0 +1,56 @@
+---
+
+- name: Get discovery URL
+  command: curl -w "\n" "https://discovery.etcd.io/new?size={{ hosts|length }}"
+  register: discovery_url
+  when: bootstrap
+
+- name: Create VM directories
+  sudo: yes
+  file:
+    dest: "{{ vm_path }}/{{ item.hostname }}"
+    state: directory
+    mode: 0755
+    owner: "{{ ansible_user_id }}"
+    group: "{{ ansible_user_id }}"
+  with_items: "{{ hosts }}"
+
+- name: Deploy VM scripts
+  template: 
+    src: coreos_qemu.sh.j2
+    dest: "{{ vm_path }}/{{ item.hostname }}/coreos_qemu.sh"
+    mode: 0755
+  with_items: "{{ hosts }}"
+
+- name: Deploy cloud config files
+  template: 
+    src: cloud-config.yml.j2
+    dest: "{{ vm_path }}/{{ item.hostname }}/cloud-config.yml"
+    mode: 0644
+  with_items: "{{ hosts }}"
+
+- name: Copy image file to VM folder
+  shell: cp "../{{ coreos_image }}" .
+  args:
+    chdir: "{{ vm_path }}/{{ item.hostname }}"
+    creates: "{{ coreos_image }}"
+  with_items: "{{ hosts }}"
+
+- name: Set proper owner for image file
+  sudo: yes
+  file:
+    path: "{{ vm_path }}/{{ item.hostname }}/{{ coreos_image }}"
+    mode: 0644
+    owner: "{{ ansible_user_id }}"
+    group: "{{ ansible_user_id }}"
+  with_items: "{{ hosts }}"
+
+- name: Copy authorized keys
+  sudo: yes
+  copy:
+    src:  "{{ pub_keys_dir }}/{{ ccserver_pkey }}"
+    dest: "{{ vm_path }}/{{ item.hostname }}/authorized_keys"
+    mode: 0640
+    owner: "{{ ansible_user_id }}"
+    group: "{{ ansible_user_id }}"
+  with_items: "{{ hosts }}"

@@ -1,0 +1,26 @@
+---
+
+- name: Download coreos image
+  sudo: yes
+  get_url:
+    url:  "{{ coreos_url_bz2 }}"
+    dest: "{{ vm_path }}/{{ coreos_image }}.bz2"
+    force: no
+
+- name: Unpack coreos image
+  sudo: yes
+  shell: bzcat "{{ coreos_image }}.bz2" > "{{ coreos_image }}"
+  args:
+    chdir: "{{ vm_path }}"
+    creates: "{{ coreos_image }}"
+
+- name: Change ownership of template file
+  sudo: yes
+  file:
+    dest: "{{ vm_path }}/{{ item }}"
+    mode: 0644
+    owner: "{{ ansible_user_id }}"
+    group: "{{ ansible_user_id }}"
+  with_items:
+    - "{{ coreos_image }}.bz2"
+    - "{{ coreos_image }}"

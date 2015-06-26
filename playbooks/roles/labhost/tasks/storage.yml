@@ -1,0 +1,31 @@
+---
+
+- name: Get volumes present
+  sudo: yes
+  shell: zfs list -t volume -H -o name
+  register: volumes
+  ignore_errors: yes
+
+- name: If volume is not present, create it
+  sudo: yes
+  shell: zfs create -V "{{ zfs_volsize }}" "{{ zfs_path }}/{{ item.hostname }}"
+  when: volumes.stdout.find("{{ zfs_path }}/{{ item.hostname }}") == -1
+  with_items: "{{ hosts }}"
+
+- name: If volume was not present, format it
+  sudo: yes
+  filesystem:
+    fstype: btrfs
+    dev: "/dev/zvol/{{ zfs_path }}/{{ item.hostname }}"
+  when: volumes.stdout.find("{{ zfs_path }}/{{ item.hostname }}") == -1
+  with_items: "{{ hosts }}"
+
+- name: Change ownership of volume
+  sudo: yes
+  file:
+    dest: "/dev/zvol/{{ zfs_path }}/{{ item.hostname }}"
+    owner: "{{ ansible_user_id }}"
+    group: "{{ ansible_user_id }}"
+    follow: yes
+    state: file
+  with_items: "{{ hosts }}"
