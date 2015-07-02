@@ -1,3 +1,13 @@
+- name: If redeploying (because of pypy upgrade, for exampe), remove tokens
+  raw: rm -f $HOME/.bootstrapped
+  when: ansible_coreos_redeploy
+  ignore_errors: True
+
+- name: If redeploying remove pypy
+  raw: rm -f $HOME/pypy
+  when: ansible_coreos_redeploy
+  ignore_errors: True
+
 - name: Check if bootstrap is needed
   raw: stat $HOME/.bootstrapped
   register: need_bootstrap
@@ -14,8 +24,11 @@
   changed_when: false
   when: need_bootstrap | failed
 
-- name: Copy get-pip.py
-  copy: src=get-pip.py dest=~/get-pip.py
+- name: Download get-pip.py
+  get_url:
+    url: https://bootstrap.pypa.io/get-pip.py
+    dest: ~/get-pip.py
+    mode: 0644
   when: need_pip | failed
 
 - name: Install pip

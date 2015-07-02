@@ -7,5 +7,5 @@
     - ansible-coreos-bootstrap
   tasks:
     - name: Install docker-py
-      pip: name=docker.py
+      pip: name=docker-py
 
