@@ -44,23 +44,16 @@
          -j MASQUERADE
   when: nat_enabled.rc != 0
 
-- name: Add static NAT to SSH ports
+- name: Add forwarded ports (SSH, HTTPS, etc)
   sudo: yes
   shell: iptables -t nat -A PREROUTING \
          -i "{{ public_interface }}" -p tcp \
-         --dport "{{ item.forward_ssh }}" \
-         -j DNAT --to-destination "{{ item.address }}:22"
+         --dport "{{ item.1.host }}" \
+         -j DNAT --to-destination "{{ item.0.address }}:{{ item.1.guest }}"
   when: nat_enabled.rc != 0
-  with_items: "{{ hosts }}"
-
-- name: Add static NAT to SSL (HTTPS) ports
-  sudo: yes
-  shell: iptables -t nat -A PREROUTING \
-         -i "{{ public_interface }}" -p tcp \
-         --dport "{{ item.forward_ssl }}" \
-         -j DNAT --to-destination "{{ item.address }}:8443"
-  when: nat_enabled.rc != 0
-  with_items: "{{ hosts }}"
+  with_subelements:
+    - hosts
+    - forwards
 
 - name: Set quemu-bridge-helper setuid
   sudo: yes

@@ -19,7 +19,7 @@ write_files:
   - path: /etc/default/docker
     owner: root
     content: |
-      DOCKER_OPTS="--insecure-registry http://{{ registry }}:5000"
+      DOCKER_OPTS="--insecure-registry {{ registry }}:5000"
 
   # Publico la ruta del direcotrio inseguro, para que todos
   # los servicios la puedan usar

@@ -30,46 +30,64 @@ flannel_subnet_len: 24
 # Indice de la VXLAN
 flannel_vni: 1
 
-# Nombre del servidor donde va a estar el registro docker
+# Nombre del servidor donde va a estar el almacenamiento compartido.
+# No basta con ponerlo aqui, hay que asignarle el metadato "storage=true"
+# en la lista de hosts
+storage: "cluster1"
+
+# Nombre del servidor donde va a estar la base de datos.
+# No basta con ponerlo aqui, hay que asignarle el metadato "database=true"
+# en la lista de hosts
+database: "cluster2"
+
+# Nombre del servidor donde van a estar los registros (docker, npm)
+# No basta con ponerlo aqui, hay que asignarle el metadato "registry=true"
+# en la lista de hosts
 registry: "cluster3"
 
 # Hosts del cluster
 hosts:
-  - {
-      # Nombre del host
-      hostname: "cluster1",
-      # Direccion MAC de su tarjeta
-      mac: "00:50:52:11:22:01",
-      # Direccion IP perteneciente al bridge
-      address: 192.168.200.11,
-      # Numero de CPUs virtuales
-      ncpus: 2,
-      # Tamaño de memoria virtual
-      memory: 2048,
-      # puerto del host a redireccionar para SSH
-      forward_ssh: 60001,
-      # puerto del host a redireccionar para SSL (HTTPS)
-      forward_ssl: 60101,
-      # Metadatos a añadir al servidor
-      metadata: "env=homelab,webserver=true",
-    }  
-  - {
-      hostname: "cluster2",
-      mac: "00:50:52:11:22:02",
-      address: 192.168.200.12,
-      ncpus: 2,
-      memory: 2048,
-      forward_ssh: 60002,
-      forward_ssl: 60102,
-      metadata: "env=homelab,webserver=true",
-    }  
-  - {
-      hostname: "cluster3",
-      mac: "00:50:52:11:22:03",
-      address: 192.168.200.13,
-      ncpus: 2,
-      memory: 2048,
-      forward_ssh: 60003,
-      forward_ssl: 60103,
-      metadata: "env=homelab,registry=true,dbserver=true"
-    }  
+
+    # Nombre del host
+  - hostname: "cluster1"
+    # Direccion MAC de su tarjeta
+    mac: "00:50:52:11:22:01"
+    # Direccion IP perteneciente al bridge
+    address: "192.168.200.11"
+    # Numero de CPUs virtuales
+    ncpus: 2
+    # Tamaño de memoria virtual
+    memory: 2048
+    # Metadatos asociados al host
+    metadata: "env=homelab,storage=true,webserver=true"
+    # puertos del host a redireccionar
+    forwards:
+      - host: 60001
+        guest: 22
+      - host: 60101
+        guest: 8443
+
+  - hostname: "cluster2"
+    mac: "00:50:52:11:22:02"
+    address: "192.168.200.12"
+    ncpus: 2
+    memory: 2048
+    metadata: "env=homelab,database=true,webserver=true"
+    forwards:
+      - host: 60002
+        guest: 22
+      - host: 60102
+        guest: 8443
+
+  - hostname: "cluster3"
+    mac: "00:50:52:11:22:03"
+    address: "192.168.200.13"
+    ncpus: 2
+    memory: 2048
+    metadata: "env=homelab,registry=true,webserver=true"
+    forwards:
+      - host: 60003
+        guest: 22
+      - host: 60103
+        guest: 8443
+
