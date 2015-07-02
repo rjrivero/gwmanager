@@ -1,0 +1,14 @@
+---
+
+- name: Create fleet directory
+  file:
+    path: /opt/fleet
+    state: directory
+    mode: 0755
+
+- name: Copy unit files to cluster members
+  copy:
+    src: units/
+    dest: /opt/fleet
+
+

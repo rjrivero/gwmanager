@@ -1,0 +1,5 @@
+---
+
+- hosts: lab_cluster
+  roles:
+    - lab-cluster

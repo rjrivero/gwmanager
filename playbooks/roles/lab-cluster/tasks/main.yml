@@ -1,0 +1,10 @@
+---
+
+# Subir unidades de servicio a los nodos
+- include: units.yml
+  tags: units
+
+# Instalacion de imagenes
+# tags: registry reload
+- include: registry.yml
+  tags: registry

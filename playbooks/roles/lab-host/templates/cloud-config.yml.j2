@@ -65,11 +65,6 @@ coreos:
 
   units:
 
-    # Reinicio docker para que coja los cambios en
-    # las variables de entorno
-    - name: docker.service
-      command: restart
-
     # Arranque de servicios de infraestructura
     - name: etcd2.service
       command: start
@@ -144,7 +139,8 @@ coreos:
         [Mount]
         What=/dev/vdb
         Where=/opt
-        Type=btrfs
+        # Prescindo de btrfs, es muy inestable...
+        # Type=btrfs
 
     # Me llevo docker a un subvolumen de btrfs
     # en la ubicacion por defecto es desesperante lo que
@@ -162,7 +158,9 @@ coreos:
         [Service]
         Type=oneshot
         RemainAfterExit=yes
-        ExecStart=-/usr/sbin/btrfs subvolume create /opt/docker
+        # Prescindo de btrfs, es muy inestable...
+        # ExecStart=-/usr/sbin/btrfs subvolume create /opt/docker
+        ExecStart=mkdir -p /opt/docker
 
     - name: var-lib-docker.mount
       command: start
@@ -178,3 +176,7 @@ coreos:
         Type=none
         Options=bind
 
+    # Reinicio docker para que coja los cambios en
+    # las variables de entorno y el repositorio
+    - name: docker.service
+      command: restart

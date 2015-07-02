@@ -1,0 +1,19 @@
+[Unit]
+Description=Vulcand Reverse Proxy
+After=docker.service
+Requires=docker.service
+
+[Service]
+TimeoutStartSec=0
+EnvironmentFile=/etc/default/registry
+ExecStartPre=-/usr/bin/docker kill vulcand-proxy
+ExecStartPre=-/usr/bin/docker rm vulcand-proxy
+ExecStartPre=/usr/bin/docker pull ${REGISTRY_URL}/vulcand:latest
+ExecStart=/usr/bin/docker run --name vulcand-proxy --rm \
+    -p 8443:8443 -p 8182:8182 ${REGISTRY_URL}/vulcand:latest \
+    /go/bin/vulcand -interface=0.0.0.0 -apiInterface=0.0.0.0 \
+    -port 8443 -apiPort=8182 -etcd=http://%H:4001
+ExecStop=/usr/bin/docker stop vulcand-proxy
+
+[X-Fleet]
+Global=true

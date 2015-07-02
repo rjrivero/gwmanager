@@ -1,0 +1,20 @@
+[Unit]
+Description=MySQL Database
+After=docker.service
+Requires=docker.service
+
+[Service]
+TimeoutStartSec=0
+EnvironmentFile=/etc/default/registry
+ExecStartPre=-/usr/bin/docker kill mysql0
+ExecStartPre=-/usr/bin/docker rm mysql0
+ExecStartPre=/usr/bin/docker pull ${REGISTRY_URL}/mysql:latest
+ExecStart=/usr/bin/docker run --name mysql0 --rm \
+          -v /opt/mysql/data:/var/lib/mysql \
+          -v /opt/mysql/conf.d:/etc/mysql/conf.d \
+          -p 3306:3306 ${REGISTRY_URL}/mysql:latest
+ExecStop=/usr/bin/docker stop mysql0
+
+[X-Fleet]
+MachineMetadata=database=true
+Conflicts=mysql@*

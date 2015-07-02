@@ -1,0 +1,11 @@
+[Unit]
+Description=Announce Web Service
+BindsTo=nginx@%i.service
+After=nginx@%i.service
+
+[Service]
+ExecStart=/bin/sh -c "while true; do etcdctl set /vulcand/backends/nginx/servers/nginx@%i '{ \"URL\": \"http://%H:8080\" }' --ttl 3600;sleep 1800;done"
+ExecStop=/usr/bin/etcdctl rm /vulcand/backends/nginx/servers/nginx@%i
+
+[X-Fleet]
+MachineOf=nginx@%i.service

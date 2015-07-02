@@ -1,0 +1,21 @@
+[Unit]
+Description=NGinx Container
+After=docker.service
+Requires=docker.service
+
+[Service]
+TimeoutStartSec=0
+EnvironmentFile=/etc/default/registry
+ExecStartPre=-/usr/bin/docker kill nginx0
+ExecStartPre=-/usr/bin/docker rm nginx0
+ExecStartPre=/usr/bin/docker pull ${REGISTRY_URL}/nginx:latest
+ExecStart=/usr/bin/docker run --name nginx0 --rm \
+          -v /opt/nginx/html:/usr/share/nginx/html:ro \
+          -v /opt/nginx/nginx.conf:/etc/nginx/nginx.conf:ro \
+          -v /opt/nginx/conf.d:/etc/nginx/conf.d:ro \
+          -p 8080:80 ${REGISTRY_URL}/nginx:latest
+ExecStop=/usr/bin/docker stop nginx0
+
+[X-Fleet]
+MachineMetadata=webserver=true
+Conflicts=nginx@*

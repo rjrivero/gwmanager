@@ -1,0 +1,72 @@
+---
+
+- name: Download docker images
+  docker:
+    image: "{{ item.name }}:{{ item.tag }}"
+    name: "{{ item.label }}-registry"
+    state: present
+    pull: missing
+  with_items: "{{ docker_images }}"
+  when: registry
+  tags: reload
+
+- name: Create docker registry folders
+  file:
+    path: "{{ item }}"
+    state: directory
+  with_items:
+    - /opt/registry
+    - /opt/registry/conf.d
+    - /opt/registry/data
+  when: registry
+  tags: reload
+
+- name: Register status of registry units
+  shell: etcdctl get /services/registry/registry@1
+  register: registry_status
+  ignore_errors: true
+
+- name: Destroy registry units (for restart)
+  shell: fleetctl destroy {{ item }}
+  args:
+    chdir: /opt/fleet
+  when: registry_status.rc != 0
+  with_items:
+    - "registry@1"
+    - "registry-discovery@1"
+
+- name: Start registry units
+  shell: fleetctl start {{ item }}
+  args:
+    chdir: /opt/fleet
+  when: registry_status.rc != 0
+  with_items:
+    - "registry@1"
+    - "registry-discovery@1"
+
+- name: Get URL of registry service
+  shell: etcdctl get /services/registry/registry@1
+  register: registry_url
+
+- name: Save URL of registry services to /etc/default/registry too
+  sudo: yes
+  file:
+    path: "/etc/default/registry"
+    content: "REGISTRY_URL=\"{{ registry_url.stdout }}\""
+    owner: root
+    group: root
+    mode: 0644
+
+- name: Retag all docker images
+  shell: docker tag "{{item.name}}:{{item.tag}}" "{{registry_url.stdout}}/{{item.label}}:latest"
+  ignore_errors: true
+  with_items: "{{ docker_images }}"
+  when: registry
+  tags: reload
+
+- name: Push all docker images to inventory
+  shell: docker push "{{registry_url.stdout}}/{{item.label}}:latest"
+  ignore_errors: true
+  with_items: "{{ docker_images }}"
+  when: registry
+  tags: reload

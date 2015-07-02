@@ -1,0 +1,19 @@
+[Unit]
+Description=Docker Private Registry
+After=docker.service
+Requires=docker.service
+
+[Service]
+TimeoutStartSec=0
+ExecStartPre=-/usr/bin/docker kill registry0
+ExecStartPre=-/usr/bin/docker rm registry0
+ExecStartPre=/usr/bin/docker pull registry:2
+ExecStart=/usr/bin/docker run --name registry0 --rm \
+          -e REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY=/var/lib/registry \
+          -v /opt/registry/data:/var/lib/registry \
+          -p 5000:5000 registry:2
+ExecStop=/usr/bin/docker stop registry0
+
+[X-Fleet]
+MachineMetadata=registry=true
+Conflicts=registry@*

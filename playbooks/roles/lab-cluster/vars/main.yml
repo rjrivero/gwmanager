@@ -1,0 +1,52 @@
+---
+
+# List of docker images to upload to the central registry
+docker_images:
+
+    # Name of the repository image
+  - name: registry
+    # Release tag to download
+    tag: 2
+    # rename it to this in the local registry
+    label: registry
+
+    # Servidor de base de datos para simular un servicio externo
+  - name: mysql
+    tag: latest
+    label: mysql
+
+    # Balanceador / proxy
+  - name: mailgun/vulcand
+    tag: v0.8.0-beta.3
+    label: vulcand
+
+    # Servidor web
+  - name: nginx
+    tag: latest
+    label: nginx
+
+    # Repositorio node compatible con npm
+  - name: keyvanfatehi/sinopia
+    tag: latest
+    label: sinopia
+
+    # Servidor io.js
+  - name: iojs
+    tag: latest
+    label: node
+
+    # Servidor OSD Cepth empaquetado por DEIS
+  - name: deis/store-daemon
+    tag: latest
+    label: store-daemon
+
+    # Servidor Monitor Cepth empaquetado por DEIS
+  - name: deis/store-monitor
+    tag: latest
+    label: store-monitor
+
+    # Servidor RADOS GW Cepth empaquetado por DEIS
+  - name: deis/store-gateway
+    tag: latest
+    label: store-gateway
+
