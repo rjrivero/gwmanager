@@ -1,0 +1,11 @@
+---
+
+- name: Bootstrap CoreOS host to be managed by ansible
+  hosts: labcluster
+  gather_facts: False
+  roles:
+    - ansible-coreos-bootstrap
+  tasks:
+    - name: Install docker-py
+      pip: name=docker.py
+
