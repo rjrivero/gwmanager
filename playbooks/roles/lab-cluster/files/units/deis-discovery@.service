@@ -1,0 +1,21 @@
+[Unit]
+Description=Announce Local Deis Store repository
+BindsTo=deis-monitor@%i.service
+After=deis-monitor@%i.service
+
+[Service]
+ExecStartPre=-/usr/bin/etcdctl mkdir /services/storage
+ExecStartPre=-/usr/bin/etcdctl mkdir /deis/store/hosts
+ExecStart=/bin/sh -c "while true; do \
+    HOST=`docker inspect deis-monitor0 | grep IPAddress | cut -d '\"' -f 4`; \
+    etcdctl set /services/storage/storage@%i $HOST --ttl 3600; \
+    etcdctl set /deis/store/hosts/$HOST deis-monitor --ttl 3600; \
+    sleep 1800; \
+    done"
+
+ExecStop=/bin/sh -c "HOST=`etcdctl get /services/storage/storage@%i`; \
+    etcdctl rm /services/storage/storage@%i; \
+    etcdctl rm /deis/store/hosts/$HOST;"
+
+[X-Fleet]
+MachineOf=deis-monitor@%i.service

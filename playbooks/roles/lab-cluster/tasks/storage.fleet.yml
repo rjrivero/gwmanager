@@ -1,0 +1,59 @@
+---
+# Me ha dado muchos problemas hacerlo con fleetctl, porque por algun
+# motivo no me arrancan los containers con --net=host. Asi que al final
+# me salto fleeetctl para esto y arranco los servicios con docker
+# directamente.
+
+- name: Check if deis-storage is started
+  shell: etcdctl get /services/storage/storage@1
+  register: storage_server
+  when: storage
+  ignore_errors: true
+
+- name: If not started, destroy units
+  when: storage and storage_server.rc != 0
+  shell: fleetctl destroy {{ item }}
+  args:
+    chdir: /opt/fleet
+  with_items:
+    - deis-discovery@1
+    - deis-gateway@1
+    - deis-daemon@1
+    - deis-monitor@1
+  ignore_errors: true
+
+- name: If not started, remove configuration
+  when: storage and storage_server.rc != 0
+  shell: etcdctl rm {{ item }} --recursive
+  ignore_errors: true
+  with_items:
+    - /deis/store
+    - /ceph
+
+- name: start deis services
+  shell: fleetctl start {{ item }}
+  args:
+    chdir: /opt/fleet
+  when: storage and storage_server.rc != 0
+  with_items:
+    - deis-monitor@1
+    - deis-discovery@1
+    - deis-daemon@1
+    - deis-gateway@1
+
+- name: Pause for a few seconds after restart
+  pause: seconds=5
+  when: storage and storage_server.rc != 0
+
+- name: Get URL of storage service
+  shell: etcdctl get /services/storage/storage@1
+  register: storage_url
+
+- name: Add storage URL to /etc/environment
+  sudo: yes
+  lineinfile:
+    dest: "/etc/environment"
+    state: present
+    regexp: "^STORAGE_URL="
+    line: "STORAGE_URL=\"{{ storage_url.stdout }}\""
+

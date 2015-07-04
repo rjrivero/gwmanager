@@ -17,8 +17,14 @@
   tags: download
 
 # Configuracion de almacenamiento ZFS
-- include: storage.yml
+- include: storage-zfs.yml
   tags: storage
+  when: zfs_path is defined and zfs_path
+
+# Configuracion de almacenamiento LVM
+- include: storage-lvm.yml
+  tags: storage
+  when: lvm_vg is defined and lvm_vg
 
 # Despliegue de maquinas virtuales
 - include: deploy.yml

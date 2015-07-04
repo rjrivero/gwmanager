@@ -1,4 +1,4 @@
 ---
-- hosts: lab_host
+- hosts: homelab
   roles:
     - lab-host

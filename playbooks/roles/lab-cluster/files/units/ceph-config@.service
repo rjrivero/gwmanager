@@ -1,0 +1,23 @@
+[Unit]
+Description=Ceph Configuration container
+After=docker.service
+Requires=docker.service
+
+[Service]
+TimeoutStartSec=0
+EnvironmentFile=/etc/environment
+ExecStartPre=/bin/mkdir -p /opt/ceph/conf.d
+ExecStartPre=-/usr/bin/docker kill ceph-config0
+ExecStartPre=-/usr/bin/docker rm ceph-config0
+ExecStartPre=/usr/bin/docker pull ${REGISTRY_URL}/ceph-config:latest
+ExecStart=/usr/bin/docker run --name ceph-config0 --rm \
+          -v /opt/ceph/conf.d:/etc/ceph \
+          -e ETCDCTL_PEERS=http://%H:4001 \
+          -e MON_IP=${COREOS_PUBLIC_IPV4} \
+          -e MON_NAME=%H \
+          ${REGISTRY_URL}/ceph-config
+ExecStop=/usr/bin/docker stop ceph-config0
+
+[X-Fleet]
+MachineMetadata=storage=true
+Conflicts=ceph-config@*

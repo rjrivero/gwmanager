@@ -27,19 +27,19 @@
   ignore_errors: true
 
 - name: Destroy registry units (for restart)
-  shell: fleetctl destroy {{ item }}
+  shell: fleetctl destroy "{{ item }}"
   args:
     chdir: /opt/fleet
-  when: registry_status.rc != 0
+  when: registry and registry_status.rc != 0
   with_items:
     - "registry@1"
     - "registry-discovery@1"
 
 - name: Start registry units
-  shell: fleetctl start {{ item }}
+  shell: fleetctl start "{{ item }}"
   args:
     chdir: /opt/fleet
-  when: registry_status.rc != 0
+  when: registry and registry_status.rc != 0
   with_items:
     - "registry@1"
     - "registry-discovery@1"
@@ -48,14 +48,13 @@
   shell: etcdctl get /services/registry/registry@1
   register: registry_url
 
-- name: Save URL of registry services to /etc/default/registry too
+- name: Add registry entry to /etc/environment, if it does not exist
   sudo: yes
-  file:
-    path: "/etc/default/registry"
-    content: "REGISTRY_URL=\"{{ registry_url.stdout }}\""
-    owner: root
-    group: root
-    mode: 0644
+  lineinfile:
+    dest: "/etc/environment"
+    state: present
+    regexp: "^REGISTRY_URL="
+    line: "REGISTRY_URL=\"{{ registry_url.stdout }}\""
 
 - name: Retag all docker images
   shell: docker tag "{{item.name}}:{{item.tag}}" "{{registry_url.stdout}}/{{item.label}}:latest"

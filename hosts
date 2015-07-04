@@ -1,5 +1,8 @@
-[lab_host]
+[homelab]
 homelab		ansible_ssh_host=192.168.1.151 bootstrap=False
+
+[hostedlab]
+hostedlab	bootstrap=True
 
 [lab_cluster]
 cluster1	storage=True
@@ -16,7 +19,10 @@ gateway-0000	ansible_ssh_port=20000
 ansible_ssh_host=192.168.1.200
 management_user=ansible
 
-[lab_host:vars]
+[homelab:vars]
+ansible_ssh_user=ansible
+
+[hostedlab:vars]
 ansible_ssh_user=ansible
 
 [lab_cluster:vars]

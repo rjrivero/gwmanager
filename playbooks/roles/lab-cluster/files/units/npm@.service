@@ -5,7 +5,7 @@ Requires=docker.service
 
 [Service]
 TimeoutStartSec=0
-EnvironmentFile=/etc/default/registry
+EnvironmentFile=/etc/environment
 ExecStartPre=-/usr/bin/docker kill npm0
 ExecStartPre=-/usr/bin/docker rm npm0
 ExecStartPre=/usr/bin/docker pull ${REGISTRY_URL}/sinopia:latest

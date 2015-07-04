@@ -1,0 +1,31 @@
+---
+
+- name: Get volumes present
+  sudo: yes
+  shell: lvdisplay -C -o name {{ lvm_vg }}
+  register: volumes
+  ignore_errors: yes
+
+- name: If volume is not present, create it
+  sudo: yes
+  shell: lvcreate -n "kvm_{{ item.hostname }}" -L "{{ vm_volsize }}" "{{ lvm_vg }}"
+  when: volumes.stdout.find("kvm_{{ item.hostname }}") == -1
+  with_items: "{{ hosts }}"
+
+- name: If volume was not present, format it
+  sudo: yes
+  filesystem:
+    fstype: ext4
+    dev: "/dev/mapper/{{ lvm_vg }}-kvm_{{ item.hostname }}"
+  when: volumes.stdout.find("kvm_{{ item.hostname }}") == -1
+  with_items: "{{ hosts }}"
+
+- name: Change ownership of volume
+  sudo: yes
+  file:
+    dest: "/dev/mapper/{{ lvm_vg }}-kvm_{{ item.hostname }}"
+    owner: "{{ ansible_user_id }}"
+    group: "{{ ansible_user_id }}"
+    follow: yes
+    state: file
+  with_items: "{{ hosts }}"

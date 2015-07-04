@@ -1,0 +1,120 @@
+---
+# Me ha dado muchos problemas hacerlo con fleetctl, porque por algun
+# motivo no me arrancan los containers con --net=host. Asi que al final
+# me salto fleeetctl para esto y arranco los servicios con docker
+# directamente.
+
+- name: Get Registry server URL
+  shell: etcdctl get /services/registry/registry@1
+  register: registry_server
+  when: storage
+
+- name: Create data directories
+  sudo: yes
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ ansible_user_id }}"
+    group: "{{ ansible_user_id }}"
+  when: storage
+  with_items:
+    - /opt/deis
+    - /opt/deis/store
+    - /opt/deis/conf
+    - /opt/deis/store/monitor
+    - /opt/deis/store/daemon
+    - /opt/deis/store/gateway
+   
+- name: Check hoy many services are running
+  shell: docker ps | grep deis- | wc -l
+  register: running_containers
+  when: storage
+
+- name: If not all three containers running, reboot environment
+  when: storage and running_containers.stdout != "3"
+  shell: docker {{ item.0 }} deis-{{ item.1 }}0
+  with_nested:
+    - [ "stop", "kill", "rm" ]
+    - [ "gateway", "daemon", "monitor" ]
+  ignore_errors: true
+
+- name: If not all three containers running, reset environment
+  when: storage and running_containers.stdout != "3"
+  shell: etcdctl rm /deis/store --recursive
+  ignore_errors: true
+
+- name: Make sure Deis monitor container is started
+  when: storage
+  docker:
+    name: deis-monitor0
+    image: "{{ registry_server.stdout }}/deis-monitor:latest"
+    state: started
+    restart_policy: on-failure
+    restart_policy_retry: 3
+    pull: missing
+    hostname: "{{ ansible_nodename }}"
+    net: host
+    publish_all_ports: yes
+    insecure_registry: true
+    volumes:
+      - /opt/deis/store/monitor:/var/lib/ceph
+    env:
+      HOST: "{{ ansible_eth0.ipv4.address }}"
+
+- name: Set variables
+  shell: etcdctl set {{ item.key }} {{ item.val }}
+  when: storage
+  with_items:
+    - key: /deis/store/hosts/{{ ansible_eth0.ipv4.address }}
+      val: "{{ ansible_nodename}}"
+    - key: /services/storage/storage@1
+      val: "{{ ansible_nodename }}"
+
+- name: Make sure Deis daemon container is started
+  when: storage
+  docker:
+    name: deis-daemon0
+    image: "{{ registry_server.stdout }}/deis-daemon:latest"
+    state: started
+    restart_policy: on-failure
+    restart_policy_retry: 3
+    pull: missing
+    net: host
+    publish_all_ports: yes
+    insecure_registry: true
+    volumes:
+      - /opt/deis/store/daemon:/var/lib/ceph
+    env:
+      HOST: "{{ ansible_eth0.ipv4.address }}"
+
+- name: Make sure Deis gateway container is started
+  when: storage
+  docker:
+    name: deis-gateway0
+    image: "{{ registry_server.stdout }}/deis-gateway:latest"
+    state: started
+    restart_policy: on-failure
+    restart_policy_retry: 3
+    pull: missing
+    ports: 9000:9000
+    insecure_registry: true
+    volumes:
+      - /opt/deis/store/gateway:/var/lib/ceph
+    env:
+      HOST: "{{ ansible_eth0.ipv4.address }}"
+      EXTERNAL_PORT: 9000
+
+- name: Get URL of storage service
+  shell: etcdctl get /services/storage/storage@1
+  register: storage_url
+  tags: skip
+
+- name: Add storage URL to /etc/environment
+  sudo: yes
+  lineinfile:
+    dest: "/etc/environment"
+    state: present
+    regexp: "^STORAGE_URL="
+    line: "STORAGE_URL=\"{{ storage_url.stdout }}\""
+  tags: skip
+

@@ -63,6 +63,14 @@
     group: "{{ ansible_user_id }}"
     mode: 04750
 
+- name: Allow bridge for qemu-bridge-helper
+  sudo: yes
+  template:
+    src: bridge.conf.j2
+    dest: /etc/qemu/bridge.conf
+    owner: root
+    group: root
+
 - name: Set DNSmasq to listen only on bridge interface
   sudo: yes
   template:

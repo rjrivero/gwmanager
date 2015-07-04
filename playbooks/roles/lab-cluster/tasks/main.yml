@@ -8,3 +8,7 @@
 # tags: registry reload
 - include: registry.yml
   tags: registry
+
+# Configuracion del almacenamiento S3
+- include: storage.yml
+  tags: storage

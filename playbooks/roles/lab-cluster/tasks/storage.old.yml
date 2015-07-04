@@ -1,0 +1,191 @@
+---
+# Me ha dado muchos problemas hacerlo con fleetctl, porque por algun
+# motivo no me arrancan los containers con --net=host. Asi que al final
+# me salto fleeetctl para esto y arranco los servicios con docker
+# directamente.
+
+- name: Get Registry server URL
+  shell: etcdctl get /services/registry/registry@1
+  register: registry_server
+  when: storage
+
+- name: Make sure Deis monitor container is started
+  when: storage
+  docker:
+    name: deis-monitor0
+    image: "{{ registry_server.stdout }}/deis-monitor:latest"
+    state: started
+    restart_policy: on-failure
+    restart_policy_retry: 3
+    pull: missing
+    insecure_registry: true
+    env:
+      HOST: "{{ ansible_eth0.ipv4.address }}"
+
+- name: Pause until initialization completes
+  pause: seconds=5
+  when: storage
+
+- name: Get deis monitor internal hostname
+  shell: docker inspect deis-monitor0 | grep IPAddress | cut -d '"' -f 4
+  register: monitor_ipaddress
+  when: storage
+
+- name: Make sure current container is owner of the store
+  shell: etcdctl get /deis/store/monSetupLock
+  register: owner_hostname
+  when: storage
+
+- name: Get deis monitor internal IP address
+  shell: docker inspect deis-monitor0 | grep IPAddress | cut -d '"' -f 4
+  register: monitor_ipaddress
+  when: storage
+
+  
+
+- name: Launch cluster initialization
+  shell: etcdctl set "/deis/store/hosts/{{ monitor_ipaddress.stdout }}" "{{ monitor_ipaddress.stdout }}"
+  when: storage
+
+- name: Pause until initialization completes
+  pause: seconds=5
+  when: storage
+
+- name: Make sure cluster initialization is complete
+
+  register: storage_status
+  when: storage
+  ignore_errors: true
+  tags: skip
+
+- name: If initialization stalled, kill containers
+  docker:
+    name: "{{ item }}0"
+    image: "{{ registry_server }}:5000/{{ item }}:latest"
+    state: absent
+  when: storage and storage_status.rc != 0
+  with_items:
+    - deis-gateway
+    - deis-daemon
+    - deis-monitor
+  ignore_errors: true
+  tags: skip
+
+- name: If monmap not present, destroy etcd entries
+  shell: etcdctl rm "{{ item }}"
+  when: storage and storage_status.rc != 0
+  with_items:
+    - /ceph/ceph/config/ceph.conf
+    - /ceph/ceph/config/ceph.mon.keyring
+    - /ceph/ceph/config/ceph.client.admin.keyring
+    - /ceph/ceph/config/done
+  ignore_errors: true
+  tags: skip
+
+- name: If monmap not present, destroy Ceph config directory
+  sudo: yes
+  file:
+    path: /opt/ceph/conf.d
+    state: absent
+  when: storage and storage_status.rc != 0
+  tags: skip
+
+- name: Recreate Ceph directories
+  file:
+    path: "{{ item }}"
+    state: directory
+  when: storage
+  with_items:
+    - /opt/ceph/conf.d
+    - /opt/ceph/osd
+  tags: skip
+
+- name: Launch ceph config container
+  when: storage
+  docker:
+    name: ceph-config0
+    image: "{{ registry_server }}:5000/ceph-config:latest"
+    state: started
+    restart_policy: on-failure
+    restart_policy_retry: 3
+    pull: missing
+    insecure_registry: true
+    volumes:
+      - /opt/ceph/conf.d:/etc/ceph
+    env:
+      ETCDCTL_PEERS: "http://{{ ansible_hostname }}:4001"
+      MON_IP: "{{ ansible_eth0.ipv4.address }}"
+      MON_NAME: "{{ ansible_hostname }}"
+  tags: skip
+    
+- name: Launch ceph monitor container
+  when: storage
+  docker:
+    name: ceph-mon0
+    image: "{{ registry_server }}:5000/ceph-mon:latest"
+    state: started
+    restart_policy: on-failure
+    restart_policy_retry: 3
+    pull: missing
+    insecure_registry: true
+    net: host
+    volumes:
+      - /opt/ceph/conf.d:/etc/ceph
+    env:
+      MON_IP: "{{ ansible_eth0.ipv4.address }}"
+      MON_NAME: "{{ ansible_hostname }}"
+  tags: skip
+
+- name: Launch ceph OSD container
+  when: storage
+  docker:
+    name: ceph-osd0
+    image: "{{ registry_server }}:5000/ceph-osd:latest"
+    state: started
+    restart_policy: on-failure
+    restart_policy_retry: 3
+    pull: missing
+    insecure_registry: true
+    net: host
+    volumes:
+      - /opt/ceph/conf.d:/etc/ceph
+      - /opt/ceph/osd:/var/lib/ceph/osd
+  tags: skip
+
+- name: Launch ceph RADOSGW container
+  when: storage
+  docker:
+    name: ceph-radosgw0
+    image: "{{ registry_server }}:5000/ceph-radosgw:latest"
+    state: started
+    restart_policy: on-failure
+    restart_policy_retry: 3
+    pull: missing
+    insecure_registry: true
+    net: host
+    volumes:
+      - /opt/ceph/conf.d:/etc/ceph
+    env:
+      RGW_NAME: "{{ ansible_hostname }}"
+      RGW_CIVETWEB_PORT: 9000
+  tags: skip
+
+- name: Set URL of storage service
+  shell: etcdctl set /services/storage/storage@1 "{{ ansible_hostname }}"
+  when: storage
+  tags: skip
+
+- name: Get URL of storage service
+  shell: etcdctl get /services/storage/storage@1
+  register: storage_url
+  tags: skip
+
+- name: Add storage URL to /etc/environment
+  sudo: yes
+  lineinfile:
+    dest: "/etc/environment"
+    state: present
+    regexp: "^STORAGE_URL="
+    line: "STORAGE_URL=\"{{ storage_url.stdout }}\""
+  tags: skip
+

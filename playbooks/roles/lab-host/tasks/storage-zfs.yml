@@ -8,7 +8,7 @@
 
 - name: If volume is not present, create it
   sudo: yes
-  shell: zfs create -V "{{ zfs_volsize }}" "{{ zfs_path }}/{{ item.hostname }}"
+  shell: zfs create -V "{{ vm_volsize }}" "{{ zfs_path }}/{{ item.hostname }}"
   when: volumes.stdout.find("{{ zfs_path }}/{{ item.hostname }}") == -1
   with_items: "{{ hosts }}"
 

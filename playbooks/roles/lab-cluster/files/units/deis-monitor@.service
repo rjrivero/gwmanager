@@ -1,0 +1,20 @@
+[Unit]
+Description=Deis Storage monitor container
+After=docker.service
+Requires=docker.service
+
+[Service]
+TimeoutStartSec=0
+EnvironmentFile=/etc/environment
+ExecStartPre=-/usr/bin/docker kill deis-monitor0
+ExecStartPre=-/usr/bin/docker rm deis-monitor0
+ExecStartPre=/usr/bin/docker pull ${REGISTRY_URL}/deis-monitor:latest
+ExecStart=/usr/bin/docker run --name deis-monitor0 --rm \
+          -e HOST=${COREOS_PUBLIC_IPV4} \
+          -h deis-monitor \
+          ${REGISTRY_URL}/deis-monitor:latest
+ExecStop=/usr/bin/docker stop deis-mon0
+
+[X-Fleet]
+MachineMetadata=storage=true
+Conflicts=deis-monitor@*

@@ -5,7 +5,7 @@ Requires=docker.service
 
 [Service]
 TimeoutStartSec=0
-EnvironmentFile=/etc/default/registry
+EnvironmentFile=/etc/environment
 ExecStartPre=-/usr/bin/docker kill nginx0
 ExecStartPre=-/usr/bin/docker rm nginx0
 ExecStartPre=/usr/bin/docker pull ${REGISTRY_URL}/nginx:latest

@@ -1,0 +1,20 @@
+[Unit]
+Description=Deis Storage Daemon container
+BindsTo=deis-monitor@%i.service
+After=deis-monitor@%i.service
+
+[Service]
+TimeoutStartSec=0
+EnvironmentFile=/etc/environment
+ExecStartPre=/usr/bin/mkdir -p /opt/deis/store
+ExecStartPre=-/usr/bin/docker kill deis-daemon0
+ExecStartPre=-/usr/bin/docker rm deis-daemon0
+ExecStartPre=/usr/bin/docker pull ${REGISTRY_URL}/deis-daemon:latest
+ExecStart=/usr/bin/docker run --name deis-daemon0 --rm \
+          -v /opt/deis/store:/var/lib/deis/store \
+          -e HOST=${COREOS_PUBLIC_IPV4} \
+          ${REGISTRY_URL}/deis-daemon:latest
+ExecStop=/usr/bin/docker stop deis-daemon0
+
+[X-Fleet]
+MachineOf=deis-monitor@%i.service

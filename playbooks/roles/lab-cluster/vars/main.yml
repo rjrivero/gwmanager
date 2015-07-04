@@ -35,18 +35,37 @@ docker_images:
     tag: latest
     label: node
 
-    # Servidor OSD Cepth empaquetado por DEIS
-  - name: deis/store-daemon
-    tag: latest
-    label: store-daemon
-
     # Servidor Monitor Cepth empaquetado por DEIS
   - name: deis/store-monitor
     tag: latest
-    label: store-monitor
+    label: deis-monitor
+
+    # Servidor OSD Cepth empaquetado por DEIS
+  - name: deis/store-daemon
+    tag: latest
+    label: deis-daemon
 
     # Servidor RADOS GW Cepth empaquetado por DEIS
   - name: deis/store-gateway
     tag: latest
-    label: store-gateway
+    label: deis-gateway
 
+    # Servidor de configuracion de Ceph
+#  - name: ceph/config
+#    tag: latest
+#    label: ceph-config
+
+    # Servidor Monitor Cepth
+#  - name: ceph/mon
+#    tag: latest
+#    label: ceph-mon
+
+    # Servidor OSD Cepth
+#  - name: ceph/osd
+#    tag: latest
+#    label: ceph-osd
+
+    # Servidor RADOS GW Cepth
+#  - name: ceph/radosgw
+#    tag: latest
+#    label: ceph-radosgw

@@ -19,14 +19,17 @@ write_files:
   - path: /etc/default/docker
     owner: root
     content: |
-      DOCKER_OPTS="--insecure-registry {{ registry }}:5000"
+      DOCKER_OPTS="--insecure-registry {{ registry_server }}:5000"
 
-  # Publico la ruta del direcotrio inseguro, para que todos
-  # los servicios la puedan usar
-  - path: /etc/default/registry
+  # Almaceno la direccion IP del host como variable de entorno,
+  # para que los servicios puedan consultarla
+  - path: /etc/environment
     owner: root
     content: |
-      REGISTRY_URL="{{ registry }}:5000"
+      # Direccion IP del host
+      COREOS_PUBLIC_IPV4="{{ item.address }}"
+      # Ruta del direcotrio inseguro
+      REGISTRY_URL="{{ registry_server }}:5000"
 
   # Hago que docker cargue las variables de entorno del
   # fichero /etc/default/docker, que por defecto systemd
@@ -85,11 +88,9 @@ coreos:
         Address={{ item.address }}/{{ bridge_mask }}
         Gateway={{ bridge_addr }}
 
-    # De momento no arranco flannel, dejo port binding. Flannel
-    # es una movida sobre todo para el discivery. deberia correr
-    # otro cluster etcd en la red interna de flannel.
+    # De momento no uso flannel...  me complica las cosas con Ceph/Deis
     # Arranco el servicio flannel con las redes indicadas
-    #- name: flanneld.service
+    # - name: flanneld.service
     #  drop-ins:
     #    - name: 50-network-config.conf
     #      content: |
@@ -160,7 +161,7 @@ coreos:
         RemainAfterExit=yes
         # Prescindo de btrfs, es muy inestable...
         # ExecStart=-/usr/sbin/btrfs subvolume create /opt/docker
-        ExecStart=mkdir -p /opt/docker
+        ExecStart=/usr/bin/mkdir -p /opt/docker
 
     - name: var-lib-docker.mount
       command: start

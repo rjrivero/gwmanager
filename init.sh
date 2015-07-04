@@ -28,7 +28,7 @@ cd "$VIRTUALENV_PATH"
 source bin/activate
 
 # Activar el entorno de ansible
-source ansible/hacking/env-setup
+[ -d ansible/hacking/env-setup ] && source ansible/hacking/env-setup
 
 # Variables de entorno que necesito
 export PUB_KEYS_DIR="$VIRTUALENV_PATH/inventory/pub_keys"

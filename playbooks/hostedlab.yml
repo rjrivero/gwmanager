@@ -1,0 +1,4 @@
+---
+- hosts: hostedlab
+  roles:
+    - lab-host
