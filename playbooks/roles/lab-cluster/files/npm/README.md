@@ -11,4 +11,5 @@ Usar el registro
 ----------------
 
     npm set registry http://{{ REGISTRY_SERVER }}:4873
+    npm set always-auth true
     npm login

@@ -12,3 +12,7 @@
 # Configuracion del almacenamiento S3
 - include: storage.yml
   tags: storage
+
+# Configuracion del registro NPM
+- include: npm.yml
+  tags: npm

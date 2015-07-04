@@ -90,4 +90,7 @@ hosts:
         guest: 22
       - host: 60103
         guest: 8443
+        # Repositorio NPM
+      - host: 60203
+        guest: 4873
 

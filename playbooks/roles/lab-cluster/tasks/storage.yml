@@ -56,8 +56,8 @@
     net: host
     publish_all_ports: yes
     insecure_registry: true
-    volumes:
-      - /opt/deis/store/monitor:/var/lib/ceph
+#    volumes:
+#      - /opt/deis/store/monitor:/var/lib/ceph
     env:
       HOST: "{{ ansible_eth0.ipv4.address }}"
 
@@ -82,8 +82,8 @@
     net: host
     publish_all_ports: yes
     insecure_registry: true
-    volumes:
-      - /opt/deis/store/daemon:/var/lib/ceph
+#    volumes:
+#      - /opt/deis/store/daemon:/var/lib/ceph
     env:
       HOST: "{{ ansible_eth0.ipv4.address }}"
 
@@ -96,13 +96,13 @@
     restart_policy: on-failure
     restart_policy_retry: 3
     pull: missing
-    ports: 9000:9000
+    ports: 8888:8888
     insecure_registry: true
-    volumes:
-      - /opt/deis/store/gateway:/var/lib/ceph
+#    volumes:
+#      - /opt/deis/store/gateway:/var/lib/ceph
     env:
       HOST: "{{ ansible_eth0.ipv4.address }}"
-      EXTERNAL_PORT: 9000
+      EXTERNAL_PORT: 8888
 
 - name: Get URL of storage service
   shell: etcdctl get /services/storage/storage@1

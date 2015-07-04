@@ -14,7 +14,7 @@ auth:
     file: ./npm.htpasswd
     # Maximum amount of users allowed to register, defaults to "+inf".
     # You can set this to -1 to disable registration.
-    max_users: -1
+    max_users: 10
 
 # a list of other known repositories we can talk to
 uplinks:
@@ -47,6 +47,6 @@ listen:
 
 # log settings
 logs:
-  - {type: stdout, format: pretty, level: http}
+  - {type: stdout, format: pretty, level: debug}
   #- {type: file, path: sinopia.log, level: info}
 

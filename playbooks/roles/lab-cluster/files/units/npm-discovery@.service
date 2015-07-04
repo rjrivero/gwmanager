@@ -1,0 +1,11 @@
+[Unit]
+Description=Announce NPM Registry
+BindsTo=npm@%i.service
+After=npm@%i.service
+
+[Service]
+ExecStart=/bin/sh -c "while true; do etcdctl set /services/npm/npm@%i 'http://%H:4873' --ttl 3600;sleep 1800;done"
+ExecStop=/usr/bin/etcdctl rm /services/npm/npm@%i
+
+[X-Fleet]
+MachineOf=npm@%i.service

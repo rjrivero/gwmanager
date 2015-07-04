@@ -8,7 +8,17 @@
   tasks:
     - name: Make /opt directory owned by core user
       sudo: yes
-      file: path=/opt state=directory owner=core group=core mode=0755
+      file: path={{ item }} state=directory owner=core group=core mode=0755
+      with_items:
+        - /opt
+        - /opt/bin
+    - name: Copy python and pip binaries to /opt/bin
+      command: cp /home/core/bin/{{ item }} /opt/bin/{{ item }}
+      args:
+        creates: "/opt/bin/{{ item }}"
+      with_items:
+        - python
+        - pip
     - name: Install docker-py
       pip: name=docker-py
 

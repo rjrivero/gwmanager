@@ -11,8 +11,8 @@ ExecStartPre=-/usr/bin/docker rm npm0
 ExecStartPre=/usr/bin/docker pull ${REGISTRY_URL}/sinopia:latest
 ExecStart=/usr/bin/docker run --name npm0 --rm \
           -v /opt/npm/storage:/opt/sinopia/storage \
-          -v /opt/npm/config.yaml:/opt/sinopia/config.yaml \
-          -v /opt/npm/npm.htpasswd:/opt/sinopia/npm.htpasswd \
+          -v /opt/npm/config.yaml:/opt/sinopia/config.yaml:ro \
+          -v /opt/npm/npm.htpasswd:/opt/sinopia/npm.htpasswd:ro \
           -p 4873:4873 ${REGISTRY_URL}/sinopia:latest
 ExecStop=/usr/bin/docker stop npm0
 

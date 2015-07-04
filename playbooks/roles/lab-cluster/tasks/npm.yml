@@ -1,0 +1,85 @@
+---
+
+- name: Copy Registry configuration
+  when: registry
+  sudo: yes
+  copy:
+    dest: /opt/npm
+    force: yes
+    # El usuario "sinopia" tiene UID y GID 1000
+    owner: 1000
+    group: 1000
+    mode: 0644
+    directory_mode: 0755
+    src: npm/
+
+- name: Create password file if not exists
+  when: registry
+  sudo: yes
+  file:
+    path: "{{ item.path }}"
+    state: "{{ item.state }}"
+    owner: "{{ item.owner }}"
+    group: "{{ item.owner }}"
+    mode: "{{ item.mode }}"
+  with_items:
+    - path: "/opt/npm/npm.htpasswd"
+      state: touch
+      mode: "u=rw,g=r,o=r"
+      # El owner de esta es "core", para poder cambiarla desde otro contenedor
+      owner: core
+    - path: "/opt/npm/storage"
+      state: directory
+      mode: "u=rwX,g=rX,o=rX"
+      owner: 1000
+
+- name: Check NPM registry URL
+  shell: etcdctl get /services/npm/npm@1
+  when: registry
+  register: npm_status
+  ignore_errors: true
+
+- name: Destroy stalled units
+  shell: fleetctl destroy {{ item }}
+  args:
+    chdir: /opt/fleet
+  when: registry and npm_status.rc != 0
+  with_items:
+    - npm@1
+    - npm-discovery@1
+
+- name: Install NPM service
+  shell: fleetctl start {{ item }}
+  args:
+    chdir: /opt/fleet
+  when: registry and npm_status.rc != 0
+  with_items:
+    - npm@1
+    - npm-discovery@1
+
+- name: Pause to let registry info propagate
+  pause: seconds=5
+  when: registry and npm_status.rc != 0
+  
+- name: Get URL of registry service
+  shell: etcdctl get /services/npm/npm@1
+  register: npm_url
+
+- name: Add registry entry to /etc/environment, if it does not exist
+  sudo: yes
+  lineinfile:
+    dest: "/etc/environment"
+    state: present
+    regexp: "^NPM_URL="
+    line: "NPM_URL=\"{{ npm_url.stdout }}\""
+
+- name: Copy npm.htpasswd file to /opt/bin/htpasswd
+  when: registry
+  copy:
+    dest: /opt/bin/htpasswd
+    force: yes
+    owner: core
+    group: core
+    mode: 0755
+    src: npm/htpasswd
+    
