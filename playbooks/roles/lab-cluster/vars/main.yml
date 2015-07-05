@@ -35,20 +35,25 @@ docker_images:
     tag: latest
     label: node
 
-    # Servidor Monitor Cepth empaquetado por DEIS
-  - name: deis/store-monitor
+    # Servidor de ficheros Swift all-in-one
+  - name: morrisjobke/docker-swift-onlyone
     tag: latest
-    label: deis-monitor
+    label: swift
+
+    # Servidor Monitor Cepth empaquetado por DEIS
+#  - name: deis/store-monitor
+#    tag: latest
+#    label: deis-monitor
 
     # Servidor OSD Cepth empaquetado por DEIS
-  - name: deis/store-daemon
-    tag: latest
-    label: deis-daemon
+#  - name: deis/store-daemon
+#    tag: latest
+#    label: deis-daemon
 
     # Servidor RADOS GW Cepth empaquetado por DEIS
-  - name: deis/store-gateway
-    tag: latest
-    label: deis-gateway
+#  - name: deis/store-gateway
+#    tag: latest
+#    label: deis-gateway
 
     # Servidor de configuracion de Ceph
 #  - name: ceph/config

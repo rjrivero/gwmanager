@@ -1,0 +1,17 @@
+{
+  "name": "swift-test",
+  "version": "0.0.1",
+  "description": "Demonstration of settings to use swift-onlyone from node.js",
+  "author": "Rafael Rivero <private@email.com>",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "read": "*",
+    "yargs": "*",
+    "string-format": "*",
+    "pkgcloud": "*"
+  },
+  "private": true,
+  "license": "MIT"
+}

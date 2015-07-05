@@ -1,0 +1,19 @@
+[Unit]
+Description=Swift OnlyOne service
+After=docker.service
+Requires=docker.service
+
+[Service]
+TimeoutStartSec=0
+EnvironmentFile=/etc/environment
+ExecStartPre=-/usr/bin/docker kill swift0
+ExecStartPre=-/usr/bin/docker rm swift0
+ExecStartPre=/usr/bin/docker pull ${REGISTRY_URL}/swift:latest
+ExecStart=/usr/bin/docker run --name swift0 --rm \
+          -v /opt/swift/storage:/srv \
+          -p 8080:8080 ${REGISTRY_URL}/swift:latest
+ExecStop=/usr/bin/docker stop swift0
+
+[X-Fleet]
+MachineMetadata=storage=true
+Conflicts=swift@*

@@ -1,0 +1,11 @@
+[Unit]
+Description=Announce Storage Service
+BindsTo=swift@%i.service
+After=swift@%i.service
+
+[Service]
+ExecStart=/bin/sh -c "while true; do etcdctl set /services/storage/storage@%i 'http://%H:8080' --ttl 3600;sleep 1800;done"
+ExecStop=/usr/bin/etcdctl rm /services/storage/storage@%i
+
+[X-Fleet]
+MachineOf=swift@%i.service
