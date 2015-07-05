@@ -70,6 +70,9 @@ hosts:
         guest: 22
       - host: 60101
         guest: 8443
+        # Hacer forward del puerto de Swift
+      - host: 60201
+        guest: 8080
 
   - hostname: "cluster2"
     mac: "00:50:52:11:22:02"

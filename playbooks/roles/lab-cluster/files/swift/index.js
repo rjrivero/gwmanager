@@ -1,5 +1,8 @@
 #!/usr/bin/env node
 
+// Alternativa para probar swift con el cliente estandar Python:
+// swift -A http://localhost:8080/auth/v1.0 -U test:tester -p testing stat
+
 var format   = require('string-format');
 var pkgcloud = require('pkgcloud');
 

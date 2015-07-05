@@ -9,6 +9,9 @@
   tags: install
 
 # Configuracion de networking
+# Para rehacer los Static NATs, hay que borar primero
+# la tabla de NAT del host:
+# sudo iptables -t nat -F
 - include: network.yml
   tags: network
 
